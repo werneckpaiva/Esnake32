@@ -10,21 +10,41 @@
 #define WIDTH               135
 #define HEIGHT              240
 
+#define SCREEN_PROPORTION 10
+
 TFT_eSPI tft = TFT_eSPI();
 
-SnakeBoard *snakeBoard;
+SnakeGame *snakeGame;
 
 // int colors[23] = {TFT_NAVY, TFT_DARKGREEN, TFT_DARKCYAN, TFT_MAROON, TFT_PURPLE, TFT_OLIVE, TFT_LIGHTGREY, TFT_DARKGREY, TFT_BLUE, TFT_GREEN, TFT_CYAN, TFT_RED, TFT_MAGENTA, TFT_YELLOW, TFT_WHITE, TFT_ORANGE, TFT_GREENYELLOW, TFT_PINK, TFT_BROWN, TFT_GOLD, TFT_SILVER, TFT_SKYBLUE, TFT_VIOLET};
 
-void drawBoard(void *params){
-  SnakeBoard *snakeBoard = (SnakeBoard *) params;
-  snakeBoard->snake->increase();
-  snakeBoard->snake->increase();
+void drawGame(void *params){
+  SnakeGame *snakeGame = (SnakeGame *) params;
   for(;;){
-    SnakeBodyPart *tail = snakeBoard->moveSnake();
-    tft.fillRect(snakeBoard->snake->head->point.x * 6 + 1, snakeBoard->snake->head->point.y * 6 + 1, 4, 4, TFT_PURPLE);
-    tft.fillRect(tail->point.x * 6, tail->point.y * 6, 6, 6, TFT_BLACK);
-    vTaskDelay(100 / portTICK_PERIOD_MS);
+    SnakeBodyPart *tail = snakeGame->moveSnake();
+    // Tail
+    if (tail != NULL) {
+      tft.fillRect(tail->point.x * SCREEN_PROPORTION,
+        tail->point.y * SCREEN_PROPORTION,
+        SCREEN_PROPORTION,
+        SCREEN_PROPORTION,
+        TFT_BLACK);
+    }
+    // Head
+    tft.fillRect(snakeGame->snake->head->point.x * SCREEN_PROPORTION,
+      snakeGame->snake->head->point.y * SCREEN_PROPORTION,
+      SCREEN_PROPORTION - 1,
+      SCREEN_PROPORTION - 1,
+      TFT_PURPLE);
+
+    // PILL
+    tft.fillRect(snakeGame->pill->x * SCREEN_PROPORTION + 1,
+      snakeGame->pill->y * SCREEN_PROPORTION + 1,
+      SCREEN_PROPORTION - 2,
+      SCREEN_PROPORTION - 2,
+      TFT_ORANGE);
+    
+    vTaskDelay(snakeGame->speed / portTICK_PERIOD_MS);
   }
 }
 
@@ -32,11 +52,11 @@ OneButton buttonRight(BUTTON_1, true);
 OneButton buttonLeft(BUTTON_2, true);
 
 static void btnLeftHandler() {
-  snakeBoard->moveAnticlockwise();
+  snakeGame->moveAnticlockwise();
 }
 
 static void btnRightHandler() {
-  snakeBoard->moveClockwise();
+  snakeGame->moveClockwise();
 }
 
 void handleBtn(void * parameter){
@@ -69,13 +89,13 @@ void setup() {
   tft.setRotation(0);
   tft.fillScreen(TFT_BLACK);
 
-  snakeBoard = new SnakeBoard(WIDTH/6, HEIGHT/6);
+  snakeGame = new SnakeGame(WIDTH/SCREEN_PROPORTION - 1, HEIGHT/SCREEN_PROPORTION - 1);
 
   xTaskCreatePinnedToCore(
-    drawBoard,
-    "DrawBoard",
+    drawGame,
+    "DrawGame",
     (5 * 1024),
-    (void *) snakeBoard,     // Parameter to pass
+    (void *) snakeGame,     // Parameter to pass
     1,                  // Task priority
     NULL,               // Task handle
     0                   // Core

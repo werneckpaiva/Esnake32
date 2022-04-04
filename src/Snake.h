@@ -1,5 +1,5 @@
-#ifndef SnakeBoard_h
-#define SnakeBoard_h
+#ifndef SnakeGame_h
+#define SnakeGame_h
 
 #include <Arduino.h>
 
@@ -7,6 +7,11 @@ class Point{
     public:
         int x;
         int y;
+        Point(){}
+        Point(int x, int y){
+            this->x = x;
+            this->y = y;
+        }
 };
 
 // SnakeBodyPart -----------------------------
@@ -34,13 +39,13 @@ class Snake{
         SnakeBodyPart *head;
         SnakeBodyPart *tail;
 
-        Snake();
+        Snake(int x, int y);
         void increase();
         SnakeBodyPart* removeTail();
 };
 
-Snake::Snake(){
-    SnakeBodyPart *body = new SnakeBodyPart(0, 0);
+Snake::Snake(int x, int y){
+    SnakeBodyPart *body = new SnakeBodyPart(x, y);
     head = tail = body;
 };
 
@@ -61,52 +66,69 @@ SnakeBodyPart* Snake::removeTail(){
     return toRemove;
 };
 
-// SnakeBoard -----------------------------
+// SnakeGame -----------------------------
 
-class SnakeBoard {
+class SnakeGame {
     private:
         int snakeDirection = 0; // (0 East, 1 North, 2 West, 3 South)
         unsigned int width;
         unsigned int height;
         void changeSnakeFromDirection(int direction);
     public:
-        SnakeBoard(unsigned int width, unsigned int height);
         Snake *snake;
+        Point *pill = NULL;
+        int speed = 200;
+        SnakeGame(unsigned int width, unsigned int height);
         SnakeBodyPart* moveSnake();
         void moveClockwise();
         void moveAnticlockwise();
+        void generateNewPill();
 };
 
-SnakeBoard::SnakeBoard(unsigned int width, unsigned int height){
+SnakeGame::SnakeGame(unsigned int width, unsigned int height){
     this->width = width;
     this->height = height;
-    this->snake = new Snake();
+    this->snake = new Snake(width/2, height/2);
+    this->snake->increase();
+    this->snake->increase();
+    this->generateNewPill();
 }
 
-SnakeBodyPart* SnakeBoard::moveSnake(){
+SnakeBodyPart* SnakeGame::moveSnake(){
     this->snake->increase();
-    if (this->snake->head->point.x < 0) {
-        this->snake->head->point.x = this->width;
-    } else if (this->snake->head->point.x > this->width) {
-        this->snake->head->point.x = 0;
-    } else if (this->snake->head->point.y < 0) {
-        this->snake->head->point.y = this->height;
-    } else if (this->snake->head->point.y > this->height) {
-        this->snake->head->point.y = 0;
-    } 
-    return this->snake->removeTail();
+    if (this->pill == NULL){
+        this->generateNewPill();
+    }
+    SnakeBodyPart *head = this->snake->head;
+    if (head->point.x < 0) {
+        head->point.x = this->width;
+    } else if (head->point.x > this->width) {
+        head->point.x = 0;
+    } else if (head->point.y < 0) {
+        head->point.y = this->height;
+    } else if (head->point.y > this->height) {
+        head->point.y = 0;
+    }
+    if (head->point.x==this->pill->x 
+        && head->point.y == this->pill->y){
+        this->generateNewPill();
+        return NULL;
+    } else {
+        return this->snake->removeTail();
+    }
+    
 };
 
-void SnakeBoard::moveClockwise(){
+void SnakeGame::moveClockwise(){
     this->snakeDirection = (this->snakeDirection + 1) % 4;
     this->changeSnakeFromDirection(this->snakeDirection);
 }
-void SnakeBoard::moveAnticlockwise(){
+void SnakeGame::moveAnticlockwise(){
     this->snakeDirection = (this->snakeDirection + 4 - 1) % 4;
     this->changeSnakeFromDirection(this->snakeDirection);
 }
 
-void SnakeBoard::changeSnakeFromDirection(int direction){
+void SnakeGame::changeSnakeFromDirection(int direction){
     switch(direction){
         case 0:
             this->snake->horizDir = 1;
@@ -125,6 +147,31 @@ void SnakeBoard::changeSnakeFromDirection(int direction){
             this->snake->vertDir  = -1;
             break;
     }
+}
+
+void SnakeGame::generateNewPill(){
+    if (this->pill != NULL){
+        delete(this->pill);
+        this->pill = NULL;
+    }
+    // Avoid generate a pill on the body
+    while(this->pill == NULL){
+        Point *newPill = new Point(random(this->width), random(this->height));
+        SnakeBodyPart *body = this->snake->tail;
+        while (body != NULL){
+            if (newPill->x == body->point.x
+                && newPill->y == body->point.y){
+                break;
+            }
+            body = body->next;
+        }
+        if (body == NULL){
+            this->pill = newPill;
+        } else {
+            delete(newPill);
+        }
+    }
+
 }
 
 #endif
