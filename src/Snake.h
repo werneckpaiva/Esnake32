@@ -73,8 +73,13 @@ class SnakeGame {
         int snakeDirection = 0; // (0 East, 1 North, 2 West, 3 South)
         unsigned int width;
         unsigned int height;
+        int gameState;
         void changeSnakeFromDirection(int direction);
     public:
+        enum SnakeGameState {
+            PLAYING,             // 0
+            STOPPED,             // 1
+        };
         Snake *snake;
         Point *pill = NULL;
         int speed = 200;
@@ -88,6 +93,7 @@ class SnakeGame {
 SnakeGame::SnakeGame(unsigned int width, unsigned int height){
     this->width = width;
     this->height = height;
+    this->gameState = SnakeGameState::PLAYING;
     this->snake = new Snake(width/2, height/2);
     this->snake->increase();
     this->snake->increase();
@@ -95,11 +101,24 @@ SnakeGame::SnakeGame(unsigned int width, unsigned int height){
 }
 
 SnakeBodyPart* SnakeGame::moveSnake(){
+    if (this->gameState != SnakeGameState::PLAYING) return NULL;
     this->snake->increase();
     if (this->pill == NULL){
         this->generateNewPill();
     }
     SnakeBodyPart *head = this->snake->head;
+
+    // Is hitting the body?
+    SnakeBodyPart *body = this->snake->tail;
+    while (body != NULL && body != head){
+        if (head->point.x == body->point.x
+            && head->point.y == body->point.y){
+            gameState = SnakeGameState::STOPPED;
+        }
+        body = body->next;
+    }
+
+    // Check boundaries
     if (head->point.x < 0) {
         head->point.x = this->width;
     } else if (head->point.x > this->width) {
@@ -109,14 +128,15 @@ SnakeBodyPart* SnakeGame::moveSnake(){
     } else if (head->point.y > this->height) {
         head->point.y = 0;
     }
+
+    // Did hit a pill? 
     if (head->point.x==this->pill->x 
         && head->point.y == this->pill->y){
         this->generateNewPill();
         return NULL;
-    } else {
-        return this->snake->removeTail();
     }
-    
+
+    return this->snake->removeTail();
 };
 
 void SnakeGame::moveClockwise(){
