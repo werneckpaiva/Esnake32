@@ -74,6 +74,7 @@ class SnakeGame {
         unsigned int width;
         unsigned int height;
         int gameState;
+        int numPillsEaten = 0;
         void changeSnakeFromDirection(int direction);
     public:
         enum SnakeGameState {
@@ -88,6 +89,7 @@ class SnakeGame {
         void moveClockwise();
         void moveAnticlockwise();
         void generateNewPill();
+        void eatPill();
 };
 
 SnakeGame::SnakeGame(unsigned int width, unsigned int height){
@@ -132,12 +134,18 @@ SnakeBodyPart* SnakeGame::moveSnake(){
     // Did hit a pill? 
     if (head->point.x==this->pill->x 
         && head->point.y == this->pill->y){
-        this->generateNewPill();
+        this->eatPill();
         return NULL;
     }
 
     return this->snake->removeTail();
 };
+
+void SnakeGame::eatPill(){
+    this->numPillsEaten++;
+    this->speed = 40 + (160 / this->numPillsEaten);
+    this->generateNewPill();
+}
 
 void SnakeGame::moveClockwise(){
     this->snakeDirection = (this->snakeDirection + 1) % 4;
